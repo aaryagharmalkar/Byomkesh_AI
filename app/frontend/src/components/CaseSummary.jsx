@@ -1,124 +1,226 @@
-"import React from \"react\";
-import { toast } from \"sonner\";
+import React from "react";
+import { toast } from "sonner";
 
+/* ------------------ Gauge Component ------------------ */
 function Gauge({ value = 0 }) {
-  const v = Math.max(0, Math.min(100, Number(value) || 0));
-  const R = 42;
-  const C = 2 * Math.PI * R;
-  const offset = C - (v / 100) * C;
-  const color = v >= 75 ? \"#00e676\" : v >= 50 ? \"#f6b84b\" : \"#e53935\";
+  const normalizedValue = Math.max(0, Math.min(100, Number(value) || 0));
+
+  const RADIUS = 42;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  const offset =
+    CIRCUMFERENCE - (normalizedValue / 100) * CIRCUMFERENCE;
+
+  const getColor = () => {
+    if (normalizedValue >= 75) return "#00e676";
+    if (normalizedValue >= 50) return "#f6b84b";
+    return "#e53935";
+  };
+
   return (
-    <svg width=\"112\" height=\"112\" viewBox=\"0 0 100 100\" className=\"block\">
-      <circle cx=\"50\" cy=\"50\" r={R} stroke=\"#1a1a2e\" strokeWidth=\"6\" fill=\"none\" />
+    <svg
+      width="112"
+      height="112"
+      viewBox="0 0 100 100"
+      className="block"
+      aria-label={`Confidence gauge: ${normalizedValue}%`}
+    >
+      {/* Background circle */}
       <circle
-        cx=\"50\" cy=\"50\" r={R}
-        stroke={color}
-        strokeWidth=\"6\"
-        fill=\"none\"
-        strokeDasharray={C}
-        strokeDashoffset={offset}
-        strokeLinecap=\"round\"
-        transform=\"rotate(-90 50 50)\"
-        style={{ transition: \"stroke-dashoffset 1s ease\" }}
+        cx="50"
+        cy="50"
+        r={RADIUS}
+        stroke="#1a1a2e"
+        strokeWidth="6"
+        fill="none"
       />
+
+      {/* Progress circle */}
+      <circle
+        cx="50"
+        cy="50"
+        r={RADIUS}
+        stroke={getColor()}
+        strokeWidth="6"
+        fill="none"
+        strokeDasharray={CIRCUMFERENCE}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform="rotate(-90 50 50)"
+        style={{ transition: "stroke-dashoffset 1s ease" }}
+      />
+
+      {/* Value text */}
       <text
-        x=\"50\" y=\"54\"
-        textAnchor=\"middle\"
-        fontFamily=\"Playfair Display, serif\"
-        fontSize=\"22\"
-        fontWeight=\"700\"
-        fill=\"#e8e8e8\"
+        x="50"
+        y="54"
+        textAnchor="middle"
+        fontFamily="Playfair Display, serif"
+        fontSize="22"
+        fontWeight="700"
+        fill="#e8e8e8"
       >
-        {v}%
+        {normalizedValue}%
       </text>
     </svg>
   );
 }
 
+/* ------------------ Main Component ------------------ */
 export default function CaseSummary({ analysis }) {
   if (!analysis) return null;
-  const { summary, case_id } = analysis;
 
+  const {
+    summary = {},
+    case_id: caseId = "case",
+  } = analysis;
+
+  const {
+    events_confirmed = 0,
+    events_inferred = 0,
+    overall_confidence = 0,
+  } = summary;
+
+  /* ------------------ Actions ------------------ */
   const downloadJSON = () => {
-    const blob = new Blob([JSON.stringify(analysis, null, 2)], { type: \"application/json\" });
+    const blob = new Blob(
+      [JSON.stringify(analysis, null, 2)],
+      { type: "application/json" }
+    );
+
     const url = URL.createObjectURL(blob);
-    const a = document.createElement(\"a\");
-    a.href = url;
-    a.download = `${case_id}_sentinel.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `${caseId}_sentinel.json`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
     URL.revokeObjectURL(url);
-    toast.success(\"Timeline exported as JSON\");
+    toast.success("Timeline exported as JSON");
   };
 
-  const printReport = () => {
-    window.print();
-  };
+  const printReport = () => window.print();
 
   const flagReview = () => {
-    toast(\"Case flagged for senior review.\", {
-      description: `${case_id} queued to Central Forensic Bureau`,
-      icon: \"⚑\",
+    toast("Case flagged for senior review.", {
+      description: `${caseId} queued to Central Forensic Bureau`,
+      icon: "⚑",
     });
   };
 
   return (
-    <section data-testid=\"case-summary\" className=\"section\">
-      <div className=\"section-title fade-up\">
-        <span className=\"bar\" />
-        <h2 className=\"section-label text-[15px]\">// Case Analysis Summary</h2>
+    <section data-testid="case-summary" className="section">
+      {/* Header */}
+      <div className="section-title fade-up">
+        <span className="bar" />
+        <h2 className="section-label text-[15px]">
+          // Case Analysis Summary
+        </h2>
       </div>
 
-      <div className=\"grid md:grid-cols-3 gap-4\">
-        <div data-testid=\"metric-confirmed\" className=\"metric-tile fade-up stagger-1\">
-          <div className=\"section-label text-[11px]\">Events Confirmed</div>
-          <div className=\"value mt-2 text-[#87d6fa]\">{summary.events_confirmed}</div>
-          <div className=\"font-mono text-[11px] text-[#6b7280] mt-1\">STATED in FIR</div>
-          <span className=\"absolute top-3 right-3 dot dot-blue pulse-blue\" />
+      {/* Metrics */}
+      <div className="grid md:grid-cols-3 gap-4">
+        {/* Confirmed */}
+        <div
+          data-testid="metric-confirmed"
+          className="metric-tile fade-up stagger-1"
+        >
+          <div className="section-label text-[11px]">
+            Events Confirmed
+          </div>
+          <div className="value mt-2 text-[#87d6fa]">
+            {events_confirmed}
+          </div>
+          <div className="font-mono text-[11px] text-[#6b7280] mt-1">
+            STATED in FIR
+          </div>
+          <span className="absolute top-3 right-3 dot dot-blue pulse-blue" />
         </div>
-        <div data-testid=\"metric-inferred\" className=\"metric-tile fade-up stagger-2\">
-          <div className=\"section-label text-[11px]\">Events Inferred</div>
-          <div className=\"value mt-2 text-[#f6b84b]\">{summary.events_inferred}</div>
-          <div className=\"font-mono text-[11px] text-[#6b7280] mt-1\">AI-deduced</div>
-          <span className=\"absolute top-3 right-3 dot dot-amber pulse-amber\" />
+
+        {/* Inferred */}
+        <div
+          data-testid="metric-inferred"
+          className="metric-tile fade-up stagger-2"
+        >
+          <div className="section-label text-[11px]">
+            Events Inferred
+          </div>
+          <div className="value mt-2 text-[#f6b84b]">
+            {events_inferred}
+          </div>
+          <div className="font-mono text-[11px] text-[#6b7280] mt-1">
+            AI-deduced
+          </div>
+          <span className="absolute top-3 right-3 dot dot-amber pulse-amber" />
         </div>
-        <div data-testid=\"metric-confidence\" className=\"metric-tile fade-up stagger-3 flex items-center gap-5\">
-          <Gauge value={summary.overall_confidence} />
+
+        {/* Confidence */}
+        <div
+          data-testid="metric-confidence"
+          className="metric-tile fade-up stagger-3 flex items-center gap-5"
+        >
+          <Gauge value={overall_confidence} />
+
           <div>
-            <div className=\"section-label text-[11px]\">Overall Confidence</div>
-            <div className=\"font-mono text-[11px] text-[#6b7280] mt-2 leading-relaxed max-w-[180px]\">
-              Weighted across stated evidence, inferred links & supporting witness claims.
+            <div className="section-label text-[11px]">
+              Overall Confidence
+            </div>
+            <div className="font-mono text-[11px] text-[#6b7280] mt-2 leading-relaxed max-w-[180px]">
+              Weighted across stated evidence, inferred links &
+              supporting witness claims.
             </div>
           </div>
         </div>
       </div>
 
-      <div className=\"mt-8 flex flex-wrap gap-3 no-print\">
+      {/* Actions */}
+      <div className="mt-8 flex flex-wrap gap-3 no-print">
         <button
-          data-testid=\"export-json-btn\"
+          data-testid="export-json-btn"
           onClick={downloadJSON}
-          className=\"btn-outline-blue px-5 py-2.5 text-[12px] flex items-center gap-2\"
+          className="btn-outline-blue px-5 py-2.5 text-[12px] flex items-center gap-2"
         >
-          <svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" strokeWidth=\"1.7\">
-            <path d=\"M12 3v12\" /><path d=\"M7 10l5 5 5-5\" /><path d=\"M4 21h16\" />
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+          >
+            <path d="M12 3v12" />
+            <path d="M7 10l5 5 5-5" />
+            <path d="M4 21h16" />
           </svg>
           Export Timeline (JSON)
         </button>
+
         <button
-          data-testid=\"export-pdf-btn\"
+          data-testid="export-pdf-btn"
           onClick={printReport}
-          className=\"btn-gold px-5 py-2.5 text-[12px] flex items-center gap-2\"
+          className="btn-gold px-5 py-2.5 text-[12px] flex items-center gap-2"
         >
-          <svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" strokeWidth=\"1.7\">
-            <path d=\"M6 2h9l5 5v15H6z\" /><path d=\"M14 2v6h6\" /><path d=\"M9 13h6M9 17h6\" />
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+          >
+            <path d="M6 2h9l5 5v15H6z" />
+            <path d="M14 2v6h6" />
+            <path d="M9 13h6M9 17h6" />
           </svg>
           Generate Report (PDF)
         </button>
+
         <button
-          data-testid=\"flag-review-btn\"
+          data-testid="flag-review-btn"
           onClick={flagReview}
-          className=\"px-5 py-2.5 text-[12px] font-stencil tracking-[0.22em] border border-[#e5393566] text-[#ff7a77] hover:bg-[#e5393510]\"
+          className="px-5 py-2.5 text-[12px] font-stencil tracking-[0.22em] border border-[#e5393566] text-[#ff7a77] hover:bg-[#e5393510]"
         >
           Flag for Review
         </button>
@@ -126,4 +228,3 @@ export default function CaseSummary({ analysis }) {
     </section>
   );
 }
-"
