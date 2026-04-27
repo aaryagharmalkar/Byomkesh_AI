@@ -49,13 +49,13 @@ export default function TopNav({
             <span
               data-testid="sentinel-wordmark"
               className="glitch font-display text-[22px] font-bold tracking-[0.22em] text-[#e8e8e8]"
-              data-text="SENTINEL"
+              data-text="BYOMKESH AI"
             >
-              SENTINEL
+              BYOMKESH AI
             </span>
 
             <span className="font-stencil text-[10px] text-[#c8a96e]">
-              Forensic · AI · Division
+              Crime · Analysis · Platform
             </span>
           </div>
         </div>

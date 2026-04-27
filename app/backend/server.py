@@ -14,6 +14,9 @@ from datetime import datetime, timezone
 
 from groq import Groq
 
+# Import the 4-module pipeline
+from modules import OCRModule, NLPExtractor, ReasoningEngine, TimelineBuilder
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -34,7 +37,7 @@ if not GROQ_API_KEY:
 
 groq_client = Groq(api_key=GROQ_API_KEY)
 
-app = FastAPI(title="SENTINEL Forensic AI")
+app = FastAPI(title="BYOMKESH AI - Forensic Analysis Platform")
 api_router = APIRouter(prefix="/api")
 
 # Configure logging
@@ -42,7 +45,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("sentinel")
+logger = logging.getLogger("byomkesh")
 
 
 # ======================================================================
@@ -101,48 +104,8 @@ class CaseAnalysis(BaseModel):
 
 
 # ======================================================================
-# LLM prompt & parsing
+# LLM prompt & parsing (retained for reference, now handled in modules)
 # ======================================================================
-SYSTEM_PROMPT = """You are SENTINEL, a forensic AI reasoning engine used by police investigators to reconstruct crime scenes from First Information Reports (FIRs).
-
-Your job: read an FIR narrative and produce a structured, forensically-rigorous reconstruction.
-
-You MUST distinguish between:
-- STATED events: explicitly mentioned in the FIR
-- INFERRED events: logically deduced but not explicitly stated (you must justify with "reasoning")
-
-Confidence levels:
-- HIGH: direct evidence from the narrative
-- MEDIUM: strong logical inference with supporting detail
-- LOW: plausible but speculative inference
-
-Return ONLY a valid JSON object with this EXACT schema, no preamble, no markdown fences:
-
-{
-  "entities": [
-    {"category": "TIME|LOCATION|ENTRY_POINT|ACTORS|ITEMS_STOLEN|EXIT|WITNESS|VICTIM|SUSPECT", "label": "short label", "value": "concise value", "confidence": "HIGH|MEDIUM|LOW"}
-  ],
-  "timeline": [
-    {"step": 1, "description": "what happened", "timestamp": "HH:MM HRS or null", "source": "STATED|INFERRED", "confidence": "HIGH|MEDIUM|LOW", "reasoning": "why (required for INFERRED, optional for STATED)"}
-  ],
-  "alternate_scenarios": [
-    {"title": "short title", "description": "alternate possible reconstruction", "probability": 22}
-  ],
-  "summary": {
-    "events_confirmed": 4,
-    "events_inferred": 3,
-    "overall_confidence": 78
-  }
-}
-
-Rules:
-- Provide 5-9 timeline events ordered chronologically
-- Every INFERRED event MUST have a reasoning field
-- Provide 1-3 alternate scenarios
-- probability is an integer percentage 0-100
-- overall_confidence is computed weighted across events
-- Be terse, precise, forensic in tone
-"""
 
 
 def _strip_fences(text: str) -> str:
@@ -163,28 +126,6 @@ def _extract_json(text: str) -> dict:
     return json.loads(match.group(0))
 
 
-async def analyze_fir_with_llm(fir_text: str, session_id: str) -> dict:
-    response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": f"""Analyse the following FIR narrative and return the JSON reconstruction:
-
----FIR BEGIN---
-{fir_text}
----FIR END---""",
-            },
-        ],
-        temperature=0.2,
-    )
-    raw = response.choices[0].message.content or ""
-    logger.info(f"LLM raw length: {len(raw)}")
-    data = _extract_json(raw)
-    return data
-
-
 # ======================================================================
 # API routes
 # ======================================================================
@@ -200,44 +141,61 @@ async def get_demo_fir():
 
 @api_router.post("/cases/analyze", response_model=CaseAnalysis)
 async def analyze_case(payload: AnalyzeRequest):
+    """
+    Analyze a FIR narrative using the 4-module pipeline.
+    
+    Pipeline:
+    1. OCR Module: Conditional text extraction
+    2. NLP Extractor: Fact extraction via spaCy + regex
+    3. Reasoning Engine: Rule-based + LLM-assisted inference
+    4. Timeline Builder: Final CaseAnalysis assembly
+    """
+    
     fir_text = (payload.fir_text or "").strip()
     if len(fir_text) < 40:
         raise HTTPException(status_code=400, detail="FIR narrative is too short to analyse (min 40 chars).")
 
     case_id = payload.case_id or f"CASE-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:4].upper()}"
-    session_id = f"sentinel-{case_id}"
+    officer = payload.officer or "INSP. SHARMA"
 
     try:
-        data = await analyze_fir_with_llm(fir_text, session_id)
-    except Exception as e:
-        logger.exception("LLM analysis failed")
-        raise HTTPException(status_code=502, detail=f"Reasoning engine failure: {e}")
-
-    # Build model (pydantic will validate)
-    try:
-        analysis = CaseAnalysis(
+        # STEP 1: OCR Module (preprocessor)
+        logger.info(f"[PIPELINE] Starting analysis for {case_id}")
+        ocr = OCRModule()
+        raw_text, ocr_applied = ocr.process(fir_text, input_type="text")
+        
+        # STEP 2: NLP Extractor (fact extraction)
+        extractor = NLPExtractor()
+        extracted_facts = extractor.extract(raw_text)
+        
+        # STEP 3: Reasoning Engine (rule + LLM)
+        engine = ReasoningEngine(groq_client=groq_client)
+        reasoning_result = engine.reason(raw_text, extracted_facts)
+        
+        # STEP 4: Timeline Builder (final assembly)
+        builder = TimelineBuilder()
+        analysis_dict = builder.build(
+            fir_text=raw_text,
+            extracted=extracted_facts,
+            reasoning=reasoning_result,
             case_id=case_id,
-            officer=payload.officer or "INSP. SHARMA",
-            fir_text=fir_text,
-            entities=[Entity(**e) for e in data.get("entities", [])],
-            timeline=[TimelineEvent(**t) for t in data.get("timeline", [])],
-            alternate_scenarios=[AlternateScenario(**a) for a in data.get("alternate_scenarios", [])],
-            summary=CaseSummary(**data.get("summary", {
-                "events_confirmed": 0, "events_inferred": 0, "overall_confidence": 0
-            })),
+            officer=officer,
         )
+        
+        # Convert dict to CaseAnalysis model (validates schema)
+        analysis = CaseAnalysis(**analysis_dict)
+        
+        # Persist to in-memory store
+        case_store.append(analysis.model_dump())
+        
+        logger.info(f"[PIPELINE] Analysis complete for {case_id}")
+        return analysis
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.exception("Schema validation failed")
-        raise HTTPException(status_code=502, detail=f"Malformed reasoning output: {e}")
-
-    # Persist
-    doc = analysis.model_dump()
-    if db is not None:
-        await db.cases.insert_one(doc)
-        doc.pop("_id", None)
-    else:
-        case_store.append(doc)
-    return analysis
+        logger.exception(f"[PIPELINE] Analysis failed for {case_id}")
+        raise HTTPException(status_code=502, detail=f"Pipeline processing failed: {str(e)}")
 
 
 @api_router.get("/cases", response_model=List[CaseAnalysis])

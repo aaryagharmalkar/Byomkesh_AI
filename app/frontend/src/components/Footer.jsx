@@ -13,7 +13,7 @@ export default function Footer({
         
         {/* Left */}
         <div className="font-stencil text-[11px] tracking-[0.25em] text-[#e3cb96]">
-          Sentinel · Forensic AI Division
+          BYOMKESH AI · Crime Analysis Platform
         </div>
 
         {/* Center */}
@@ -23,7 +23,7 @@ export default function Footer({
 
         {/* Right */}
         <div className="font-stencil text-[11px] tracking-[0.25em] text-[#ff7a77]">
-          Restricted // Law Enforcement Only
+          Confidential // Law Enforcement Only
         </div>
 
       </div>

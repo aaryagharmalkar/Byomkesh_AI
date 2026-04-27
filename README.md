@@ -1,8 +1,18 @@
-# Byomkesh_AI
+# BYOMKESH AI
 
-Major Project
+AI-Powered Forensic Analysis and Crime Scene Investigation Platform
 
-## Install
+## Overview
+
+BYOMKESH AI is an intelligent system designed to assist law enforcement in analyzing First Information Reports (FIRs) and crime scene data. It extracts key facts, constructs forensic timelines, identifies logical connections, and suggests alternate scenarios—all powered by advanced reasoning and natural language processing.
+
+## Features
+
+- **Evidence Extraction**: Automatically identify times, locations, actors, entry/exit points, and stolen items
+- **Timeline Reconstruction**: Build chronological event sequences distinguishing stated facts from inferred connections
+- **Reasoning Engine**: Rule-based forensic logic combined with AI reasoning for scenario analysis
+- **Alternate Scenarios**: Generate plausible alternative explanations with probability assessments
+- **Confidence Scoring**: Weighted confidence metrics based on evidence completeness and logical consistency
 
 Install the Python backend dependencies from the repository root:
 

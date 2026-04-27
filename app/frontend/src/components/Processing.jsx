@@ -89,7 +89,7 @@ export default function Processing({ done = false }) {
             <div className="line mt-2">
               <span className="prompt">&gt;</span>
               <span className="text-[#a0f0b4] blink-cursor">
-                Awaiting Claude Sonnet 4.5 reasoning output
+                Processing analysis via BYOMKESH AI reasoning engine
               </span>
             </div>
           )}

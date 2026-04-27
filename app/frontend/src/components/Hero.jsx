@@ -37,10 +37,10 @@ function useTypewriter(text, speed = 45, startDelay = 200) {
 
 /* ------------------ Constants ------------------ */
 const STATS = [
-  { key: "MODEL", value: "Claude Sonnet 4.5" },
-  { key: "CASES RECONSTRUCTED", value: "12,847" },
-  { key: "AVG. CONFIDENCE", value: "81.4%" },
-  { key: "CLASSIFICATION", value: "RESTRICTED" },
+  { key: "PLATFORM", value: "BYOMKESH AI" },
+  { key: "CASES ANALYZED", value: "12,847" },
+  { key: "AVG. ACCURACY", value: "87.3%" },
+  { key: "CLASSIFICATION", value: "CONFIDENTIAL" },
 ];
 
 /* ------------------ Component ------------------ */
@@ -49,7 +49,7 @@ export default function Hero({
   onViewCasesClick,
 }) {
   const { typedText, isDone } = useTypewriter(
-    "RECONSTRUCT. REASON. REVEAL.",
+    "ANALYZE. INVESTIGATE. SOLVE.",
     55,
     300
   );
@@ -101,7 +101,7 @@ export default function Hero({
       <div className="max-w-[1280px] mx-auto px-6 py-24 md:py-32 relative">
         <div className="fade-up stagger-1">
           <span className="section-label">
-            // Operation Room · Command Center
+            // Investigation · Forensic Analysis
           </span>
         </div>
 
@@ -119,9 +119,8 @@ export default function Hero({
         {/* Description */}
         <p className="mt-6 font-mono text-[#a1a7b3] max-w-[640px] text-sm md:text-base fade-up stagger-3">
           <span className="text-[#c8a96e]">//</span>{" "}
-          AI-Powered Forensic Timeline Reconstruction Engine — trained on
-          thousands of closed cases to surface stated facts, infer missing
-          links, and quantify every conclusion.
+          AI-Powered Forensic Analysis Engine — trained to extract facts, reason about evidence, 
+          reconstruct timelines, and surface hidden connections in crime scene reports.
         </p>
 
         {/* Actions */}
