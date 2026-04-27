@@ -17,7 +17,7 @@ backend/venv/
 app/backend/venv/
 
 # Environment files
-backend/.env
+app/backend/.env
 .env
 .env.*
 !*.example
